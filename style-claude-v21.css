@@ -59,10 +59,11 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
   transition:opacity .34s var(--eo),transform .38s var(--sp) }
 .hero.hide { opacity:0; transform:translateY(-16px); pointer-events:none }
 
+.hero-text { margin-top:64px; padding-left:18px; pointer-events:none }
 .hero-text .kicker { font-size:11px; letter-spacing:6px; font-weight:700; color:var(--teal); text-transform:uppercase }
 .hero-text h1 { font-size:34px; font-weight:800; letter-spacing:-1.5px; line-height:.95; text-shadow:0 2px 20px rgba(0,0,0,.6) }
 
-.hero-btns { display:flex; gap:9px; margin-left:auto; align-items:flex-start; padding-top:2px }
+.hero-btns { position:absolute; top:0; left:0; right:12px; display:flex; justify-content:space-between; gap:9px; align-items:flex-start; padding-top:2px }
 
 /* Pill */
 .h-pill { display:flex; align-items:center; border-radius:18px; height:52px; overflow:hidden;
@@ -75,7 +76,7 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
 .h-sep { width:1px; height:22px; background:var(--border) }
 
 /* Filter FAB */
-.filter-fab { position:absolute; z-index:5; right:18px; bottom:calc(env(safe-area-inset-bottom) + 102px);
+.filter-fab { position:absolute; z-index:5; right:18px; bottom:calc(env(safe-area-inset-bottom) + 132px);
   width:46px; height:46px; border-radius:50%;
   background:rgba(10,24,22,.88); border:1px solid var(--border);
   backdrop-filter:var(--blur-sm); -webkit-backdrop-filter:var(--blur-sm);
@@ -89,7 +90,7 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
    BOTTOM NAV — Style C
 ══════════════════════════════════════════════════════════ */
 .bnav { position:absolute; z-index:12;
-  left:14px; right:14px; bottom:calc(env(safe-area-inset-bottom) + 16px);
+  left:14px; right:14px; bottom:calc(env(safe-area-inset-bottom) + 6px);
   height:74px; border-radius:38px;
   background:rgba(10,24,22,.92); border:1px solid rgba(90,200,250,.16);
   backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
@@ -153,7 +154,7 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
   border-radius:24px 24px 0 0;
   background:var(--surf-1); border:1px solid var(--border-sub); border-bottom:none;
   backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
-  padding-bottom:calc(env(safe-area-inset-bottom) + 16px);
+  padding-bottom:calc(env(safe-area-inset-bottom) + 6px);
   transition:transform .38s var(--sp),opacity .24s var(--eo) }
 .sheet.hidden { transform:translateY(106%); opacity:0; pointer-events:none }
 
@@ -509,7 +510,7 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
    TOAST
 ══════════════════════════════════════════════════════════ */
 #toast { position:absolute; z-index:50; left:50%;
-  bottom:calc(env(safe-area-inset-bottom) + 108px);
+  bottom:calc(env(safe-area-inset-bottom) + 126px);
   transform:translateX(-50%) translateY(16px);
   background:rgba(10,24,22,.9); border:1px solid var(--border);
   backdrop-filter:var(--blur-sm); -webkit-backdrop-filter:var(--blur-sm);
@@ -522,9 +523,11 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
 ══════════════════════════════════════════════════════════ */
 @media(max-width:390px) {
   .hero-text h1 { font-size:30px }
+  .hero-text { padding-left:14px }
   .h-pill button { width:42px }
   .bnav { left:10px; right:10px }
   .bnav button { font-size:9px }
+  .test-toggle { bottom:calc(env(safe-area-inset-bottom) + 84px) }
   .status-btns { grid-template-columns:repeat(2,1fr) }
 }
 
@@ -717,7 +720,7 @@ html, body, #app { position:fixed; inset:0; width:100%; height:100dvh; overflow:
 .vignette { background:
   radial-gradient(circle at 50% 0%, rgba(90,200,250,.10), transparent 34%),
   linear-gradient(180deg,rgba(0,0,0,.48) 0%,transparent 30%,transparent 58%,rgba(0,0,0,.58) 100%); }
-.hero { top:calc(env(safe-area-inset-top) + 18px); }
+.hero { top:calc(env(safe-area-inset-top) + 14px); }
 .h-pill, .bnav, .sheet, .panel, .settings-panel { box-shadow:var(--glass-shadow); }
 .h-pill { border-color:rgba(255,255,255,.10); background:linear-gradient(180deg,rgba(18,42,38,.76),rgba(7,18,16,.72)); }
 .bnav { height:72px; border-color:rgba(255,255,255,.10); background:linear-gradient(180deg,rgba(18,42,38,.86),rgba(7,18,16,.82)); }
@@ -799,3 +802,33 @@ html, body, #app { position:fixed; inset:0; width:100%; height:100dvh; overflow:
   html, body, #app { height:100vh; }
   .sheet { max-height:calc(100vh - env(safe-area-inset-top) - 22px); }
 }
+
+
+/* ══ V2.2 TEST TOGGLE / CHANGELOG LAYOUT ═══════════════════ */
+.test-toggle { position:absolute; z-index:13;
+  left:50%; bottom:calc(env(safe-area-inset-bottom) + 86px);
+  transform:translateX(-50%);
+  min-width:82px; height:34px; padding:0 13px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  color:var(--teal); font-size:12px; font-weight:800; letter-spacing:.01em;
+  background:linear-gradient(180deg,rgba(18,42,38,.82),rgba(7,18,16,.78));
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:var(--blur-sm); -webkit-backdrop-filter:var(--blur-sm);
+  box-shadow:0 8px 26px rgba(0,0,0,.36);
+  transition:transform .2s var(--sp),opacity .18s var(--eo) }
+.test-toggle svg { width:16px; height:16px; stroke:var(--teal) }
+.test-toggle:active { transform:translateX(-50%) scale(.94) }
+.test-toggle.active { background:linear-gradient(180deg,rgba(90,200,250,.22),rgba(90,200,250,.09)); }
+.test-toggle.hidden { opacity:0; pointer-events:none; transform:translateX(-50%) translateY(8px) }
+.test-badge { position:absolute; top:4px; right:5px; width:7px; height:7px; border-radius:50%; background:#ff3b30; display:none; box-shadow:0 0 0 2px rgba(7,18,16,.9) }
+
+.changelog-list { display:flex; flex-direction:column; gap:10px; padding:10px 0 }
+.clog-item { padding:12px 14px; border-radius:16px; background:rgba(90,200,250,.05); border:1px solid var(--border-sub) }
+.clog-head { display:flex; justify-content:space-between; gap:12px; align-items:baseline; margin-bottom:7px }
+.clog-head b { font-size:14px; color:var(--text) }
+.clog-head small { font-size:11px; color:var(--muted); white-space:nowrap }
+.clog-item ul { margin:0; padding-left:18px; color:rgba(240,250,248,.72); font-size:12px; line-height:1.45 }
+.clog-item li { margin:3px 0 }
+
+/* V2.2 final iOS hero placement override */
+.hero { top:calc(env(safe-area-inset-top) + 14px); left:0; right:0; min-height:118px; display:block; align-items:initial; gap:0; }

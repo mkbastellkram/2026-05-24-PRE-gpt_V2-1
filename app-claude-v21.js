@@ -1,12 +1,28 @@
 /* ============================================================
-   PR Explorer · app-claude-v21.js · Midnight Teal Pro
-   V2.1: Topo default, Filter-Fix, Solo-Modus, Linienstil,
-         Pingrösse, Wischgesten für alle Panels, Test-Tab
+   PR Explorer · app-claude-v22.js · Midnight Teal Pro
+   V2.2: Apple-Safe-Area Layout, Test-Schalter oberhalb Bottom-Nav,
+         Grundeinstellung Sichtbarkeit Test, Änderungslogbuch
    ============================================================ */
 'use strict';
 
 const qs  = s => document.querySelector(s);
 const qsa = s => [...document.querySelectorAll(s)];
+
+const APP_VERSION = 'V2.2';
+const APP_CHANGELOG = [
+  { version:'V2.2', date:'2026-05-31', title:'Apple-Safe-Area Layout und Test-Schalter', changes:[
+    'Bottom-Navigation näher an den unteren Displayrand verschoben.',
+    'Test-Schalter aus der Bottom-Navigation herausgelöst und oberhalb der Navigation platziert.',
+    'Schriftzüge MADEIRA und PR Explorer nach unten versetzt, damit die obere linke Button-Gruppe am linken Bildschirmrand liegen kann.',
+    'Grundeinstellung „Test-Schalter anzeigen“ ergänzt.',
+    'Änderungslogbuch in den Einstellungen ergänzt.'
+  ]},
+  { version:'V2.1', date:'2026-05-24', title:'High-End Karten- und Teststand', changes:[
+    'Topo als Standardkarte.',
+    'Filter-Fix, Solo-Modus, Linienstil und Pin-Größe.',
+    'Wischgesten für Panels und Funktionstest-Tab.'
+  ]}
+];
 
 const DATA = (window.PR_DATA||[]).sort((a,b)=>
   parseFloat(a.id.replace('PR ',''))-parseFloat(b.id.replace('PR ','')));
@@ -20,6 +36,7 @@ let cfg = Object.assign({
   tripStart:null, tripEnd:null, base:'topo',
   soloMode:false, soloId:null,
   layers:{ tracks:true, drive:true, heat:false, markers:true, regions:false },
+  showTestToggle:true,
 }, JSON.parse(localStorage.getItem('prCfg')||'{}'));
 function saveCfg()    { localStorage.setItem('prCfg',    JSON.stringify(cfg)); }
 function saveFavs()   { localStorage.setItem('prFavs',   JSON.stringify([...favs])); }
@@ -111,7 +128,16 @@ function exitSoloMode(){ cfg.soloMode=false;cfg.soloId=null;saveCfg();renderLaye
 
 /* UI */
 function toast(t){ const el=qs('#toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200); }
-function setTab(tab){ S.tab=tab;qsa('#bottomNav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));qs('#panel').classList.toggle('hidden',tab==='map');qs('#hero').classList.toggle('hide',tab!=='map');qs('.filter-fab')?.classList.toggle('hidden',tab!=='map');S.panel=tab!=='map';if(S.panel){renderPanel();setTimeout(()=>map.invalidateSize(),200);} }
+function openTestPanel(){
+  S.tab='test';
+  qsa('#bottomNav button').forEach(x=>x.classList.remove('active'));
+  qs('#testToggle')?.classList.add('active');
+  qs('#panel').classList.remove('hidden');qs('#hero').classList.add('hide');qs('.filter-fab')?.classList.add('hidden');S.panel=true;
+  if(!_testActive){const f=TEST_STEPS.flatMap(c=>c.steps).find(s=>!_testResults[s.id]);if(f)_testActive=f.id;}
+  renderTestTab();setTimeout(()=>{map.invalidateSize();if(_testActive){const el=qs(`#tc-${_testActive}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}},300);
+}
+function syncTestToggle(){ const t=qs('#testToggle'); if(!t)return; t.classList.toggle('hidden',!cfg.showTestToggle); t.classList.toggle('active',S.tab==='test'); }
+function setTab(tab){ S.tab=tab;qsa('#bottomNav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));qs('#testToggle')?.classList.remove('active');qs('#panel').classList.toggle('hidden',tab==='map');qs('#hero').classList.toggle('hide',tab!=='map');qs('.filter-fab')?.classList.toggle('hidden',tab!=='map');S.panel=tab!=='map';syncTestToggle();if(S.panel){renderPanel();setTimeout(()=>map.invalidateSize(),200);} }
 function openDetail(id,zoom=false){ S.selected=DATA.find(r=>r.id===id);if(!S.selected)return;qs('#panel').classList.add('hidden');qs('#detailPanel').classList.remove('hidden');renderDetail();if(zoom){const b=routeBounds(S.selected);if(b)map.flyToBounds(b,{paddingTopLeft:[20,120],paddingBottomRight:[20,300],maxZoom:14,duration:.9});}setTimeout(()=>{highlightPin(id);drawElevProfile(S.selected,'elevCanvas');},200); }
 function closeDetail(){ qs('#detailPanel').classList.add('hidden');S.selected=null;lgMarkers.eachLayer(m=>{const el=m.getElement();if(el)el.classList.remove('pin-sel');}); }
 function setFullscreen(on){ S.fullscreen=on;qs('#app').classList.toggle('fullscreen',on);qs('#fullscreenClose').classList.toggle('hidden',!on);closeDetail();qs('#panel').classList.add('hidden');S.panel=false;setTimeout(()=>map.invalidateSize(),200); }
@@ -204,6 +230,10 @@ function openSettings(){ renderSettings();qs('#settingsPanel').classList.remove(
 function closeSettings(){ qs('#settingsPanel').classList.add('hidden'); }
 function fmtDate(d){ if(!d)return '–';return new Date(d).toLocaleDateString('de',{day:'numeric',month:'short',year:'numeric'}); }
 function lineStyleBtns(cfgKey,def){ return ['solid','dashed','dotted'].map(s=>`<button class="line-style-btn ${(cfg[cfgKey]||def)===s?'ls-active':''}" onclick="cfg['${cfgKey}']='${s}';saveCfg();renderLayers();renderSettings()">${s==='solid'?'━━━':s==='dashed'?'╌╌╌':'···'}</button>`).join(''); }
+
+function changelogHtml(){
+  return `<div class="sg"><div class="sg-title">Änderungslogbuch</div><div class="sg-box"><div class="changelog-list">${APP_CHANGELOG.map(v=>`<div class="clog-item"><div class="clog-head"><b>${v.version} · ${v.title}</b><small>${v.date}</small></div><ul>${v.changes.map(c=>`<li>${c}</li>`).join('')}</ul></div>`).join('')}</div></div></div>`;
+}
 function renderSettings(){
   const dL=cfg.tripStart&&cfg.tripEnd?`${fmtDate(cfg.tripStart)} – ${fmtDate(cfg.tripEnd)}`:'Nicht gesetzt';
   qs('#settingsContent').innerHTML=`
@@ -242,7 +272,11 @@ function renderSettings(){
     <div class="sg"><div class="sg-title">Ebenen</div><div class="sg-box">
       ${['tracks','drive','heat','markers','regions'].map(k=>`<div class="sg-row" style="cursor:default"><span class="sg-label">${{tracks:'GPX Wanderwege',drive:'KML Anfahrten',heat:'Heatmap',markers:'PR-Pins',regions:'Concelhos-Grenzen'}[k]}</span><input type="checkbox" class="s-tog" ${cfg.layers[k]?'checked':''} onchange="cfg.layers['${k}']=this.checked;${k==='regions'?'toggleRegions()':'renderLayers();'}saveCfg();renderSettings()"></div>`).join('')}
     </div></div>
-    <div class="s-footer">PR Explorer · Claude V2.1 · Midnight Teal<br>Alle Einstellungen lokal gespeichert.</div>`;
+    <div class="sg"><div class="sg-title">Grundeinstellungen</div><div class="sg-box">
+      <div class="sg-row" style="cursor:default"><span class="sg-label">Test-Schalter anzeigen</span><input type="checkbox" class="s-tog" ${cfg.showTestToggle?'checked':''} onchange="cfg.showTestToggle=this.checked;saveCfg();syncTestToggle();renderSettings()"></div>
+    </div></div>
+    ${changelogHtml()}
+    <div class="s-footer">PR Explorer · ${APP_VERSION} · Midnight Teal<br>Alle Einstellungen lokal gespeichert.</div>`;
 }
 function setPinShape(sh){ cfg.pinShape=sh;saveCfg();renderLayers();renderSettings(); }
 
@@ -350,7 +384,7 @@ let _testResults=JSON.parse(localStorage.getItem('prTestResults')||'{}');
 let _testActive=null;
 function saveTestResults(){ localStorage.setItem('prTestResults',JSON.stringify(_testResults));_updateTestBadge(); }
 function _updateTestBadge(){ const b=qs('#testBadge');if(!b)return;b.style.display=TEST_STEPS.flatMap(c=>c.steps).some(s=>_testResults[s.id]==='fail')?'block':'none'; }
-function renderTestTab(){ const el=qs('#panelContent');if(!el)return;const all=TEST_STEPS.flatMap(c=>c.steps),total=all.length,done=all.filter(s=>_testResults[s.id]).length,pass=all.filter(s=>_testResults[s.id]==='pass').length,fail=all.filter(s=>_testResults[s.id]==='fail').length,skip=all.filter(s=>_testResults[s.id]==='skip').length,pct=Math.round(done/total*100);let h=`<div class="test-wrap"><div class="test-header"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div><h2>Funktionstest V2.0</h2><p>${done} von ${total} geprüft · ${pct}%</p></div><button class="ts-export-sm" onclick="tcExport()" title="Ergebnisse kopieren">📋</button></div><div class="test-progress"><div class="test-progress-fill" style="width:${pct}%"></div></div></div>`;let num=0;TEST_STEPS.forEach(cat=>{h+=`<div class="test-section-title">${cat.cat}</div>`;cat.steps.forEach(step=>{num++;const r=_testResults[step.id],isActive=_testActive===step.id;const cls=isActive?'tc-active':(r?`tc-${r}`:'');const numTxt=r==='pass'?'✓':r==='fail'?'✗':r==='skip'?'—':num;h+=`<div class="test-card ${cls}" id="tc-${step.id}"><div class="test-card-head" onclick="tcToggle('${step.id}')"><div class="tc-num">${numTxt}</div><div class="tc-title"><b>${step.title}</b><span>${step.sub}</span></div><div class="tc-icon">${step.icon}</div></div><div class="test-card-body"><div class="tap-box"><div class="tap-lbl">👆 Tippe jetzt</div><div class="tap-action">${step.tap}</div><div class="tap-expect">📋 Erwartet: ${step.expect}</div>${step.note?`<div class="tap-note">ℹ️ ${step.note}</div>`:''}</div><div class="tc-note-label">Notiz</div><textarea class="tc-note" id="tcn-${step.id}" placeholder="Was ist aufgefallen?" onclick="event.stopPropagation()">${_testResults['note_'+step.id]||''}</textarea><div class="tc-btns"><button class="tc-btn tc-pass-btn" onclick="tcResult('${step.id}','pass');event.stopPropagation()">✓ Funktioniert</button><button class="tc-btn tc-fail-btn" onclick="tcResult('${step.id}','fail');event.stopPropagation()">✗ Fehler</button><button class="tc-btn tc-skip-btn" onclick="tcResult('${step.id}','skip');event.stopPropagation()">—</button></div></div></div>`;});});if(done===total){h+=`<div class="test-summary"><h3>Test abgeschlossen</h3><div class="ts-grid"><div class="ts-stat ts-pass"><b>${pass}</b><small>Bestanden</small></div><div class="ts-stat ts-fail"><b>${fail}</b><small>Fehler</small></div><div class="ts-stat ts-skip"><b>${skip}</b><small>Übersprungen</small></div></div>${all.filter(s=>_testResults[s.id]==='fail').map(s=>`<div class="ts-fail-item">✗ ${s.icon} ${s.title}</div>`).join('')}<button class="ts-reset" onclick="tcReset()">↺ Zurücksetzen</button><button class="ts-export" onclick="tcExport()">📋 Ergebnisse kopieren</button></div>`;}el.innerHTML=h+'</div>'; }
+function renderTestTab(){ const el=qs('#panelContent');if(!el)return;const all=TEST_STEPS.flatMap(c=>c.steps),total=all.length,done=all.filter(s=>_testResults[s.id]).length,pass=all.filter(s=>_testResults[s.id]==='pass').length,fail=all.filter(s=>_testResults[s.id]==='fail').length,skip=all.filter(s=>_testResults[s.id]==='skip').length,pct=Math.round(done/total*100);let h=`<div class="test-wrap"><div class="test-header"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div><h2>Funktionstest ${APP_VERSION}</h2><p>${done} von ${total} geprüft · ${pct}%</p></div><button class="ts-export-sm" onclick="tcExport()" title="Ergebnisse kopieren">📋</button></div><div class="test-progress"><div class="test-progress-fill" style="width:${pct}%"></div></div></div>`;let num=0;TEST_STEPS.forEach(cat=>{h+=`<div class="test-section-title">${cat.cat}</div>`;cat.steps.forEach(step=>{num++;const r=_testResults[step.id],isActive=_testActive===step.id;const cls=isActive?'tc-active':(r?`tc-${r}`:'');const numTxt=r==='pass'?'✓':r==='fail'?'✗':r==='skip'?'—':num;h+=`<div class="test-card ${cls}" id="tc-${step.id}"><div class="test-card-head" onclick="tcToggle('${step.id}')"><div class="tc-num">${numTxt}</div><div class="tc-title"><b>${step.title}</b><span>${step.sub}</span></div><div class="tc-icon">${step.icon}</div></div><div class="test-card-body"><div class="tap-box"><div class="tap-lbl">👆 Tippe jetzt</div><div class="tap-action">${step.tap}</div><div class="tap-expect">📋 Erwartet: ${step.expect}</div>${step.note?`<div class="tap-note">ℹ️ ${step.note}</div>`:''}</div><div class="tc-note-label">Notiz</div><textarea class="tc-note" id="tcn-${step.id}" placeholder="Was ist aufgefallen?" onclick="event.stopPropagation()">${_testResults['note_'+step.id]||''}</textarea><div class="tc-btns"><button class="tc-btn tc-pass-btn" onclick="tcResult('${step.id}','pass');event.stopPropagation()">✓ Funktioniert</button><button class="tc-btn tc-fail-btn" onclick="tcResult('${step.id}','fail');event.stopPropagation()">✗ Fehler</button><button class="tc-btn tc-skip-btn" onclick="tcResult('${step.id}','skip');event.stopPropagation()">—</button></div></div></div>`;});});if(done===total){h+=`<div class="test-summary"><h3>Test abgeschlossen</h3><div class="ts-grid"><div class="ts-stat ts-pass"><b>${pass}</b><small>Bestanden</small></div><div class="ts-stat ts-fail"><b>${fail}</b><small>Fehler</small></div><div class="ts-stat ts-skip"><b>${skip}</b><small>Übersprungen</small></div></div>${all.filter(s=>_testResults[s.id]==='fail').map(s=>`<div class="ts-fail-item">✗ ${s.icon} ${s.title}</div>`).join('')}<button class="ts-reset" onclick="tcReset()">↺ Zurücksetzen</button><button class="ts-export" onclick="tcExport()">📋 Ergebnisse kopieren</button></div>`;}el.innerHTML=h+'</div>'; }
 function tcToggle(id){ if(_testActive&&_testActive!==id){const n=qs(`#tcn-${_testActive}`);if(n)_testResults[`note_${_testActive}`]=n.value;}_testActive=_testActive===id?null:id;renderTestTab();if(_testActive)setTimeout(()=>{const el=qs(`#tc-${_testActive}`);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});},60); }
 function tcResult(id,result){ const n=qs(`#tcn-${id}`);if(n)_testResults[`note_${id}`]=n.value;_testResults[id]=result;saveTestResults();const all=TEST_STEPS.flatMap(c=>c.steps);let found=false,next=null;for(const s of all){if(found&&!_testResults[s.id]){next=s.id;break;}if(s.id===id)found=true;}_testActive=next;renderTestTab();if(next)setTimeout(()=>{const el=qs(`#tc-${next}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},80); }
 function tcReset(){ if(!confirm('Test zurücksetzen?'))return;TEST_STEPS.flatMap(c=>c.steps).forEach(s=>{delete _testResults[s.id];delete _testResults[`note_${s.id}`];});_testActive=null;saveTestResults();renderTestTab(); }
@@ -362,7 +396,7 @@ function tcExport(){
   const fail = all.filter(s=>_testResults[s.id]==='fail').length;
   const skip = all.filter(s=>_testResults[s.id]==='skip').length;
   const done = pass+fail+skip;
-  let txt = `PR Explorer · Testergebnisse V2.0\n${now}\n${'─'.repeat(36)}\n`;
+  let txt = `PR Explorer · Testergebnisse ${APP_VERSION}\n${now}\n${'─'.repeat(36)}\n`;
   txt += `Gesamt: ${done}/${all.length} · ✓ ${pass} · ✗ ${fail} · — ${skip}\n${'─'.repeat(36)}\n\n`;
   TEST_STEPS.forEach(cat=>{
     txt += `[ ${cat.cat} ]\n`;
@@ -393,16 +427,8 @@ function tcFallbackCopy(txt){
 
 /* BIND */
 function bind(){
-  qsa('#bottomNav button').forEach(b=>{
-    b.onclick=()=>{
-      if(b.dataset.tab==='test'){
-        S.tab='test';qsa('#bottomNav button').forEach(x=>x.classList.toggle('active',x.dataset.tab==='test'));
-        qs('#panel').classList.remove('hidden');qs('#hero').classList.add('hide');qs('.filter-fab')?.classList.add('hidden');S.panel=true;
-        if(!_testActive){const f=TEST_STEPS.flatMap(c=>c.steps).find(s=>!_testResults[s.id]);if(f)_testActive=f.id;}
-        renderTestTab();setTimeout(()=>{map.invalidateSize();if(_testActive){const el=qs(`#tc-${_testActive}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}},300);
-      } else { setTab(b.dataset.tab); }
-    };
-  });
+  qsa('#bottomNav button').forEach(b=>{ b.onclick=()=>setTab(b.dataset.tab); });
+  const tt=qs('#testToggle'); if(tt)tt.onclick=()=>openTestPanel();
   qs('#locateBtn').onclick=()=>{map.locate({setView:true,maxZoom:15,enableHighAccuracy:true,timeout:9000});};
   map.on('locationfound',e=>{ if(locMarker)map.removeLayer(locMarker); if(locCircle)map.removeLayer(locCircle); locCircle=L.circle(e.latlng,{radius:e.accuracy||20,color:'#5ac8fa',weight:1,opacity:.7,fillColor:'#5ac8fa',fillOpacity:.12}).addTo(map); locMarker=L.circleMarker(e.latlng,{radius:8,color:'#fff',weight:2,fillColor:'#0a84ff',fillOpacity:1}).addTo(map); toast('Standort markiert'); });
   map.on('locationerror',()=>toast('Standort nicht verfügbar'));
@@ -437,8 +463,8 @@ const _addCSS=`
 const _styleEl=document.createElement('style');_styleEl.textContent=_addCSS;document.head.appendChild(_styleEl);
 
 /* GLOBALS */
-Object.assign(window,{S,F,cfg,favs,saveFavs,saveCfg,saveStatus,openDetail,closeDetail,setTab,setSt,setBase,soloOnMap,exitSoloMode,openSettings,closeSettings,renderSettings,setPinShape,openColorSheet,closeColorSheet,confirmColor,setColorTab,sliderChanged,hexChanged,pickColor,openIconSheet,closeIconSheet,confirmIcon,filterIcons,pickIcon,openDateSheet,closeDateSheet,confirmDate,calPrev,calNext,calDay,exportICS,exportTripICS,resetFilters,setRegion,setSF,toggleRegions,dualMove,renderFilterSheet,closeAllSheets,closeBackdrop,fitVisible,renderLayers,renderPanel,renderDetail,tcToggle,tcResult,tcReset,tcExport,renderTestTab,qs,lineStyleBtns});
+Object.assign(window,{S,F,cfg,favs,saveFavs,saveCfg,saveStatus,openDetail,closeDetail,setTab,setSt,setBase,soloOnMap,exitSoloMode,openSettings,closeSettings,renderSettings,setPinShape,openColorSheet,closeColorSheet,confirmColor,setColorTab,sliderChanged,hexChanged,pickColor,openIconSheet,closeIconSheet,confirmIcon,filterIcons,pickIcon,openDateSheet,closeDateSheet,confirmDate,calPrev,calNext,calDay,exportICS,exportTripICS,resetFilters,setRegion,setSF,toggleRegions,dualMove,renderFilterSheet,closeAllSheets,closeBackdrop,fitVisible,renderLayers,renderPanel,renderDetail,tcToggle,tcResult,tcReset,tcExport,renderTestTab,openTestPanel,syncTestToggle,APP_VERSION,APP_CHANGELOG,qs,lineStyleBtns});
 
 /* INIT */
-bind();renderFilterSheet();renderLayers();setTab('map');setTimeout(fitMadeira,300);_updateTestBadge();
+bind();renderFilterSheet();renderLayers();setTab('map');syncTestToggle();setTimeout(fitMadeira,300);_updateTestBadge();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(()=>{});

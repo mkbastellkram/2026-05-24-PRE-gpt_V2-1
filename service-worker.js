@@ -1,5 +1,5 @@
 /* PR Explorer · Claude V2.1 · Service Worker */
-const CACHE = 'pr-explorer-claude-v2-1';
+const CACHE = 'pr-explorer-claude-v2-2';
 const ASSETS = ['./', './index.html', './style-claude-v21.css', './app-claude-v21.js',
   './pr-data.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {

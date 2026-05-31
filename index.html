@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>PR Explorer Madeira · Claude V2.1</title>
+<title>PR Explorer Madeira · V2.2</title>
 <meta name="theme-color" content="#060f0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -194,12 +194,14 @@
       <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       <b>Optionen</b>
     </button>
-    <button data-tab="test" style="position:relative">
-      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      <b>Test</b>
-      <span id="testBadge" style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#ff3b30;display:none"></span>
-    </button>
   </nav>
+
+  <!-- TEST TOGGLE — oberhalb der Bottom Navigation -->
+  <button id="testToggle" class="test-toggle" data-tab="test" aria-label="Testprotokoll öffnen">
+    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    <span>Test</span>
+    <span id="testBadge" class="test-badge"></span>
+  </button>
 
   <button id="fullscreenClose" class="fs-close hidden">&#x2715;</button>
   <div id="toast"></div>
