@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>PR Explorer Madeira · V2.4.4</title>
+<title>PR Explorer Madeira · V2.4</title>
 <meta name="theme-color" content="#060f0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="./style-claude-v21.css">
+<link rel="stylesheet" href="./style-claude-v244.css">
 </head>
 <body>
 <div id="app">
@@ -45,7 +45,7 @@
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
         <div class="h-sep"></div>
-        <button id="shareBtn" aria-label="Audit teilen">
+        <button id="shareBtn" aria-label="Teilen" class="btn-inactive">
           <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
         </button>
       </div>
@@ -69,8 +69,6 @@
       <div id="regionFilters" class="chip-row"></div>
       <div class="fsec-label" style="margin-top:16px">Status</div>
       <div id="statusFilters" class="sf-chips"></div>
-      <div class="fsec-label" style="margin-top:16px">Journal-Sortierung</div>
-      <div id="journalSortFilters" class="chip-row"></div>
       <div id="rangeSliders" style="margin-top:16px"></div>
     <button id="resetFilters" class="reset-btn">Filter zurücksetzen</button>
     </div>
@@ -211,6 +209,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="./pr-data.js"></script>
-<script src="./app-claude-v21.js"></script>
+<script src="./app-claude-v244.js"></script>
 </body>
 </html>
