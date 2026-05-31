@@ -1,15 +1,24 @@
 /* ============================================================
-   PR Explorer · app-claude-v23.js · Midnight Teal Pro
-   V2.3: Filter-FAB abgesenkt, Dark-OSM entfernt,
-         Kartenansichten und freie Overlays ergänzt
+   PR Explorer · app-claude-v244.js · Midnight Teal Pro
+   V2.4.4: Versionszählung korrigiert, Audit-Export,
+         Journal-Sortierung und Kontursteuerung ergänzt
    ============================================================ */
 'use strict';
 
 const qs  = s => document.querySelector(s);
 const qsa = s => [...document.querySelectorAll(s)];
 
-const APP_VERSION = 'V2.3';
+const APP_VERSION = 'V2.4.4';
 const APP_CHANGELOG = [
+  { version:'V2.4.4', date:'2026-05-31', title:'Audit-Export, Konturen und Journal-Sortierung', changes:[
+    'Versionszähler auf V2.4.4 korrigiert; Änderungslogbuch und App-Titel synchronisiert.',
+    'Teilen-Button aktiviert: exportiert das aktuelle Test-/Auditprotokoll per Web Share oder kopiert es in die Zwischenablage.',
+    'Teststatus „—“ in „Anmerkung“ umbenannt, damit offene Prüfpunkte sauber als Worklist übergeben werden können.',
+    'GPX- und KML-Linien erhalten separat steuerbare Konturen mit Farbe, Breite und Ein/Aus-Schalter.',
+    'Filtereinstellungen um Journal-Sortierung erweitert: Nummer, Name, Länge, Anfahrt, Fahrzeit, Höhenmeter, Status und Favoriten.',
+    'Filter-Symbol nochmals abgesenkt und optisch an Test-Schalter und Bottom-Navigation angepasst.',
+    'Teilen-Button optisch und funktional aus dem deaktivierten Zustand gelöst.'
+  ]},
   { version:'V2.3', date:'2026-05-31', title:'Kartenansichten und freie Overlays', changes:[
     'Filter-Symbol nach unten versetzt und visuell an die neue Bottom-Navigation/Test-Schalter-Zone angepasst.',
     'Dark-OSM-Kartenansicht ersatzlos entfernt; gespeicherte Alt-Auswahl wird automatisch auf Topo zurückgesetzt.',
@@ -39,10 +48,11 @@ let prStatus = JSON.parse(localStorage.getItem('prStatus')||'{}');
 let cfg = Object.assign({
   gpxColor:'#5ac8fa', kmlColor:'#ff9500',
   pinColor:'#ff9500', pinShape:'tag', pinIcon:'🥾',
-  pinSize:1.0, gpxWeight:3, gpxDash:'solid', kmlWeight:2, kmlDash:'dashed',
+  pinSize:1.0, gpxWeight:3, gpxDash:'solid', gpxOutline:true, gpxOutlineColor:'#081412', gpxOutlineWeight:4, kmlWeight:2, kmlDash:'dashed', kmlOutline:true, kmlOutlineColor:'#081412', kmlOutlineWeight:4,
   tripStart:null, tripEnd:null, base:'topo',
   soloMode:false, soloId:null,
   layers:{ tracks:true, drive:true, heat:false, markers:true, regions:false, hiking:false, seamarks:false },
+  journalSort:'number',
   showTestToggle:true,
 }, JSON.parse(localStorage.getItem('prCfg')||'{}'));
 function saveCfg()    { localStorage.setItem('prCfg',    JSON.stringify(cfg)); }
@@ -147,6 +157,24 @@ function computeFilterBounds(list){ const n=v=>(typeof v==='number'&&!isNaN(v))?
 function globalFilterBounds(){ return computeFilterBounds(DATA.filter(r=>getSt(r.id)!=='skip')); }
 function passRangeFilter(r){ const n=v=>(typeof v==='number'&&!isNaN(v))?v:null; const d=n(r.distanceKm);if(d!==null&&(d<F.distMin||d>F.distMax))return false; const k=n(r.driveKm);if(k!==null&&(k<F.driveKmMin||k>F.driveKmMax))return false; const m=n(r.driveMin);if(m!==null&&(m<F.driveMinMin||m>F.driveMinMax))return false; const u=n(r.elevUp);if(u!==null&&(u<F.elevUpMin||u>F.elevUpMax))return false; return true; }
 function filtered(){ return regionFiltered().filter(passRangeFilter); }
+function prNumVal(r){ return parseFloat(String(r.id||'').replace('PR ',''))||999; }
+function favVal(r){ return favs.has(r.id)?0:1; }
+function statusVal(r){ return {open:0,limited:1,closed:2,skip:3}[getSt(r.id)]??9; }
+function sortPrList(list){
+  const mode=cfg.journalSort||'number';
+  return [...list].sort((a,b)=>{
+    if(mode==='name') return String(a.name||'').localeCompare(String(b.name||''),'de') || prNumVal(a)-prNumVal(b);
+    if(mode==='distance') return (a.distanceKm||9999)-(b.distanceKm||9999) || prNumVal(a)-prNumVal(b);
+    if(mode==='drivekm') return (a.driveKm||9999)-(b.driveKm||9999) || prNumVal(a)-prNumVal(b);
+    if(mode==='drivemin') return (a.driveMin||9999)-(b.driveMin||9999) || prNumVal(a)-prNumVal(b);
+    if(mode==='elevup') return (a.elevUp||99999)-(b.elevUp||99999) || prNumVal(a)-prNumVal(b);
+    if(mode==='status') return statusVal(a)-statusVal(b) || prNumVal(a)-prNumVal(b);
+    if(mode==='favorite') return favVal(a)-favVal(b) || prNumVal(a)-prNumVal(b);
+    return prNumVal(a)-prNumVal(b);
+  });
+}
+function setJournalSort(mode){ cfg.journalSort=mode; saveCfg(); renderFilterSheet(); renderPanel(); }
+function journalSortLabel(){ return ({number:'PR-Nummer',name:'Name',distance:'Track-Länge',drivekm:'Anfahrt km',drivemin:'Anfahrtszeit',elevup:'Höhenmeter ↑',status:'Status',favorite:'Favoriten zuerst'}[cfg.journalSort||'number']); }
 function allBounds(){ const pts=[]; filtered().forEach(r=>{if(r.track?.length)pts.push(...r.track.map(p=>[p[0],p[1]]));else if(r.lat&&r.lon)pts.push([r.lat,r.lon]);}); return pts.length?L.latLngBounds(pts):L.latLngBounds([[32.60,-17.28],[32.90,-16.58]]); }
 function routeBounds(r){ const pts=[]; if(r.track?.length)pts.push(...r.track.map(p=>[p[0],p[1]])); if(r.driveRoute?.length)pts.push(...r.driveRoute); if(r.lat&&r.lon)pts.push([r.lat,r.lon]); return pts.length?L.latLngBounds(pts):null; }
 
@@ -158,8 +186,8 @@ function renderLayers(){
   const list=cfg.soloMode&&cfg.soloId?DATA.filter(r=>r.id===cfg.soloId):filtered();
   const gw=+(cfg.gpxWeight||3),kw=+(cfg.kmlWeight||2),ps=+(cfg.pinSize||1.0);
   list.forEach(r=>{
-    if(cfg.layers.tracks&&r.track?.length){const opts={color:cfg.gpxColor,weight:gw,opacity:.85,lineCap:'round',lineJoin:'round',smoothFactor:1.1};const da=dashArr(cfg.gpxDash||'solid',gw);if(da)opts.dashArray=da;L.polyline(r.track.map(p=>[p[0],p[1]]),opts).addTo(lgTrack);}
-    if(cfg.layers.drive&&r.driveRoute?.length){const opts={color:cfg.kmlColor,weight:kw,opacity:.75,lineCap:'round',lineJoin:'round',smoothFactor:1.3};const da=dashArr(cfg.kmlDash||'dashed',kw);if(da)opts.dashArray=da;L.polyline(r.driveRoute,opts).addTo(lgDrive);}
+    if(cfg.layers.tracks&&r.track?.length){const pts=r.track.map(p=>[p[0],p[1]]);const da=dashArr(cfg.gpxDash||'solid',gw);if(cfg.gpxOutline){const oo={color:cfg.gpxOutlineColor||'#081412',weight:gw+(+cfg.gpxOutlineWeight||4),opacity:.78,lineCap:'round',lineJoin:'round',smoothFactor:1.1};if(da)oo.dashArray=da;L.polyline(pts,oo).addTo(lgTrack);}const opts={color:cfg.gpxColor,weight:gw,opacity:.9,lineCap:'round',lineJoin:'round',smoothFactor:1.1};if(da)opts.dashArray=da;L.polyline(pts,opts).addTo(lgTrack);}
+    if(cfg.layers.drive&&r.driveRoute?.length){const da=dashArr(cfg.kmlDash||'dashed',kw);if(cfg.kmlOutline){const oo={color:cfg.kmlOutlineColor||'#081412',weight:kw+(+cfg.kmlOutlineWeight||4),opacity:.72,lineCap:'round',lineJoin:'round',smoothFactor:1.3};if(da)oo.dashArray=da;L.polyline(r.driveRoute,oo).addTo(lgDrive);}const opts={color:cfg.kmlColor,weight:kw,opacity:.78,lineCap:'round',lineJoin:'round',smoothFactor:1.3};if(da)opts.dashArray=da;L.polyline(r.driveRoute,opts).addTo(lgDrive);}
     if(cfg.layers.heat&&r.driveRoute?.length){L.polyline(r.driveRoute,{color:'#ffb000',weight:10,opacity:.14,lineCap:'round',smoothFactor:2}).addTo(lgHeat);L.polyline(r.driveRoute,{color:'#ff4400',weight:4,opacity:.2,lineCap:'round',smoothFactor:2}).addTo(lgHeat);}
     if(cfg.layers.markers&&r.lat&&r.lon){const st=getSt(r.id),col=levelColor(r.level),nr=r.id.replace('PR ','');const fav=favs.has(r.id)?'<span class="pin-fav"></span>':'';const w=Math.round(58*ps),h=Math.round(48*ps),fs=Math.round(9.8*ps);const html=`<div class="pr-pin-hit"><div class="pr-pin-inner"><div class="pin-tag" style="background:${col};font-size:${fs}px">${nr}${fav}<span class="pin-sd ${st}"></span></div><div class="pin-tail" style="border-top-color:${col}"></div></div></div>`;const ico=L.divIcon({html,className:'pr-pin',iconSize:[w,h],iconAnchor:[w/2,h]});const m=L.marker([r.lat,r.lon],{icon:ico,riseOnHover:true,keyboard:false,bubblingMouseEvents:false});m._prId=r.id;m.on('click',e=>{L.DomEvent.stopPropagation(e);openDetail(r.id,true);});m.on('touchstart',e=>{L.DomEvent.stopPropagation(e);},{passive:true});m.addTo(lgMarkers);}
   });
@@ -196,6 +224,7 @@ function renderFilterSheet(){
   const keys=[...new Set(DATA.map(groupOf))].filter(k=>REGIONS[k]);
   qs('#regionFilters').innerHTML=`<button class="f-chip ${F.region==='all'?'active':''}" onclick="setRegion('all')">Alle</button>`+keys.map(k=>`<button class="f-chip ${F.region===k?'active':''}" onclick="setRegion('${k}')">${REGIONS[k]}</button>`).join('');
   qs('#statusFilters').innerHTML=Object.entries(STATUS_DEF).map(([k,d])=>`<div class="sf-chip ${F.status===k?'active-chip':''}" data-s="${k}" onclick="setSF('${k}')"><span class="dot" style="background:${d.dot}"></span>${d.label}</div>`).join('');
+  const sort=qs('#journalSortFilters');if(sort){const opts=[['number','PR-Nummer'],['name','Name'],['distance','Länge'],['drivekm','Anfahrt km'],['drivemin','Fahrzeit'],['elevup','Hm ↑'],['status','Status'],['favorite','Favoriten']];sort.innerHTML=opts.map(([k,l])=>`<button class="f-chip ${cfg.journalSort===k?'active':''}" onclick="setJournalSort('${k}')">${l}</button>`).join('');}
   const sl=qs('#rangeSliders');if(sl){sl.innerHTML=`<div class="filter-note">Skala bleibt global. Die Griffe zeigen den gewählten Bereich innerhalb aller PRs.</div>`+dualSliderHtml('dist','Track-Länge',gb.distMin,gb.distMax,F.distMin,F.distMax,'km')+dualSliderHtml('drivekm','Anfahrt',gb.driveKmMin,gb.driveKmMax,F.driveKmMin,F.driveKmMax,'km')+dualSliderHtml('drivemin','Anfahrtszeit',gb.driveMinMin,gb.driveMinMax,F.driveMinMin,F.driveMinMax,'min')+dualSliderHtml('elevup','Höhenmeter ↑',gb.elevUpMin,gb.elevUpMax,F.elevUpMin,F.elevUpMax,'m');['dist','drivekm','drivemin','elevup'].forEach(id=>{dualMove(id,'lo');dualMove(id,'hi');});}
 }
 function dualSliderHtml(id,label,min,max,curMin,curMax,unit){ if(min===max)return '';const st=max-min<=10?0.1:max-min<=100?1:max-min<=1000?5:10;return `<div class="dual-slider-wrap"><div class="dual-sl-label"><span>${label}</span><span class="range-vals" id="${id}-val">${curMin}–${curMax} ${unit}</span></div><div class="dual-sl" id="${id}-wrap"><div class="track"></div><div class="fill" id="${id}-fill"></div><input type="range" id="${id}-lo" min="${min}" max="${max}" value="${curMin}" step="${st}" oninput="dualMove('${id}','lo')"><input type="range" id="${id}-hi" min="${min}" max="${max}" value="${curMax}" step="${st}" oninput="dualMove('${id}','hi')"></div></div>`; }
@@ -212,9 +241,9 @@ function tripBannerHtml(){ if(!cfg.tripStart||!cfg.tripEnd)return '';const s=new
 function renderPanel(){
   const el=qs('#panelContent');if(!el)return;
   if(S.tab==='test'){renderTestTab();return;}
-  const list=filtered();let h='';
+  const list=sortPrList(filtered());let h='';
   if(S.tab==='overview'){ h=`${tripBannerHtml()}<div class="stats"><div class="stat"><b>${DATA.length}</b><small>PR gesamt</small></div><div class="stat"><b>${list.length}</b><small>Sichtbar</small></div><div class="stat"><b>${favs.size}</b><small>Favoriten</small></div></div><button class="btn-primary" onclick="setTab('journal')">Alle PR anzeigen</button>`; }
-  else if(S.tab==='journal'){ const sb=cfg.soloMode?`<div class="solo-banner"><span>Solo: ${cfg.soloId}</span><button onclick="exitSoloMode();renderPanel()">× Alle</button></div>`:'';h=`<div class="search-row"><input class="search-input" placeholder="PR suchen…" value="${S.query}" oninput="S.query=this.value;renderLayers();renderPanel()"></div>${sb}<div class="list">${list.map(r=>prCardHtml(r,true)).join('')||'<div class="empty-state">Keine PR gefunden.</div>'}</div>`; }
+  else if(S.tab==='journal'){ const sb=cfg.soloMode?`<div class="solo-banner"><span>Solo: ${cfg.soloId}</span><button onclick="exitSoloMode();renderPanel()">× Alle</button></div>`:'';h=`<div class="search-row"><input class="search-input" placeholder="PR suchen…" value="${S.query}" oninput="S.query=this.value;renderLayers();renderPanel()"></div><div class="sort-note">Sortierung: ${journalSortLabel()}</div>${sb}<div class="list">${list.map(r=>prCardHtml(r,true)).join('')||'<div class="empty-state">Keine PR gefunden.</div>'}</div>`; }
   else if(S.tab==='trips'){ const fL=DATA.filter(r=>favs.has(r.id));h=`${tripBannerHtml()}<div class="p-section">Favoriten</div><div class="list">${fL.map(r=>prCardHtml(r,true)).join('')||'<div class="empty-state">Noch keine Favoriten.</div>'}</div>`; }
   else if(S.tab==='options'){ h=`<div class="p-section">Kartenstil</div><div class="mode-grid">${Object.keys(BASE_LABELS).map(m=>`<button class="mode-chip ${cfg.base===m?'active':''}" onclick="setBase('${m}')">${BASE_LABELS[m]}</button>`).join('')}</div><div class="p-section">Ebenen</div><div class="sg-box" style="border-radius:18px;overflow:hidden;background:rgba(90,200,250,.04);border:1px solid rgba(90,200,250,.1)">${APP_LAYER_KEYS.map(k=>`<div class="opt-row"><span style="font-size:18px;width:28px;text-align:center">${OVERLAY_ICONS[k]}</span><span class="opt-label">${OVERLAY_LABELS[k]}</span><input type="checkbox" class="s-tog" ${cfg.layers[k]?'checked':''} onchange="setLayer('${k}',this.checked)"></div>`).join('')}</div><button class="btn-primary" style="margin-top:14px" onclick="fitVisible();setTab('map')">Sichtbare PR einpassen</button>`; }
   el.innerHTML=h;
@@ -277,6 +306,12 @@ function lineStyleBtns(cfgKey,def){ return ['solid','dashed','dotted'].map(s=>`<
 function changelogHtml(){
   return `<div class="sg"><div class="sg-title">Änderungslogbuch</div><div class="sg-box"><div class="changelog-list">${APP_CHANGELOG.map(v=>`<div class="clog-item"><div class="clog-head"><b>${v.version} · ${v.title}</b><small>${v.date}</small></div><ul>${v.changes.map(c=>`<li>${c}</li>`).join('')}</ul></div>`).join('')}</div></div></div>`;
 }
+function outlineSettingsHtml(prefix,label,accent){
+  const onKey=prefix+'Outline', colKey=prefix+'OutlineColor', wKey=prefix+'OutlineWeight';
+  return `<div class="sg-row" style="cursor:default"><span class="sg-label">Kontur anzeigen</span><input type="checkbox" class="s-tog" ${cfg[onKey]?'checked':''} onchange="cfg['${onKey}']=this.checked;saveCfg();renderLayers();renderSettings()"></div>
+  <div class="sg-row" onclick="openColorSheet('${prefix}Outline','${label} Konturfarbe')"><div class="sg-icon" style="background:${accent}">◉</div><span class="sg-label">Konturfarbe</span><span class="sg-val"><div class="sg-cdot" style="background:${cfg[colKey]||'#081412'}"></div><svg class="sg-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
+  <div class="sg-row" style="cursor:default;flex-direction:column;align-items:stretch;padding:12px 16px;gap:8px"><div style="display:flex;justify-content:space-between"><span class="sg-label">Konturbreite</span><span id="${prefix}owVal" style="font-size:13px;color:var(--teal);font-weight:700">${cfg[wKey]||4}px</span></div><input type="range" min="0" max="10" step="0.5" value="${cfg[wKey]||4}" class="s-range-sl" oninput="cfg['${wKey}']=+this.value;saveCfg();renderLayers();qs('#${prefix}owVal').textContent=this.value+'px'"></div>`;
+}
 function renderSettings(){
   const dL=cfg.tripStart&&cfg.tripEnd?`${fmtDate(cfg.tripStart)} – ${fmtDate(cfg.tripEnd)}`:'Nicht gesetzt';
   qs('#settingsContent').innerHTML=`
@@ -291,6 +326,7 @@ function renderSettings(){
         <input type="range" min="1" max="8" step="0.5" value="${cfg.gpxWeight||3}" class="s-range-sl" oninput="cfg.gpxWeight=+this.value;saveCfg();renderLayers();qs('#gpwVal').textContent=this.value+'px'">
         <div class="line-style-row">${lineStyleBtns('gpxDash','solid')}</div>
       </div>
+      ${outlineSettingsHtml('gpx','GPX','rgba(90,200,250,.1)')}
     </div></div>
     <div class="sg"><div class="sg-title">KML Anfahrt</div><div class="sg-box">
       <div class="sg-row" onclick="openColorSheet('kml','KML Farbe')"><div class="sg-icon" style="background:rgba(255,149,0,.1)">🎨</div><span class="sg-label">Farbe</span><span class="sg-val"><div class="sg-cdot" style="background:${cfg.kmlColor}"></div><svg class="sg-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
@@ -299,6 +335,7 @@ function renderSettings(){
         <input type="range" min="1" max="8" step="0.5" value="${cfg.kmlWeight||2}" class="s-range-sl" oninput="cfg.kmlWeight=+this.value;saveCfg();renderLayers();qs('#kmwVal').textContent=this.value+'px'">
         <div class="line-style-row">${lineStyleBtns('kmlDash','dashed')}</div>
       </div>
+      ${outlineSettingsHtml('kml','KML','rgba(255,149,0,.1)')}
     </div></div>
     <div class="sg"><div class="sg-title">Kartenpin</div><div class="sg-box">
       <div class="sg-row" onclick="openColorSheet('pin','Pin Farbe')"><div class="sg-icon" style="background:rgba(255,149,0,.1)">📍</div><span class="sg-label">Farbe</span><span class="sg-val"><div class="sg-cdot" style="background:${cfg.pinColor}"></div><svg class="sg-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
@@ -317,6 +354,7 @@ function renderSettings(){
     </div></div>
     <div class="sg"><div class="sg-title">Grundeinstellungen</div><div class="sg-box">
       <div class="sg-row" style="cursor:default"><span class="sg-label">Test-Schalter anzeigen</span><input type="checkbox" class="s-tog" ${cfg.showTestToggle?'checked':''} onchange="cfg.showTestToggle=this.checked;saveCfg();syncTestToggle();renderSettings()"></div>
+      <div class="sg-row" style="cursor:default;flex-direction:column;align-items:stretch;padding:12px 16px;gap:10px"><span class="sg-label">Journal-Sortierung</span><div class="mode-grid">${[['number','PR-Nummer'],['name','Name'],['distance','Länge'],['drivekm','Anfahrt'],['drivemin','Fahrzeit'],['elevup','Hm ↑'],['status','Status'],['favorite','Favoriten']].map(([k,l])=>`<button class="mode-chip ${cfg.journalSort===k?'active':''}" onclick="setJournalSort('${k}');renderSettings()">${l}</button>`).join('')}</div></div>
     </div></div>
     ${changelogHtml()}
     <div class="s-footer">PR Explorer · ${APP_VERSION} · Midnight Teal<br>Alle Einstellungen lokal gespeichert.</div>`;
@@ -427,12 +465,12 @@ let _testResults=JSON.parse(localStorage.getItem('prTestResults')||'{}');
 let _testActive=null;
 function saveTestResults(){ localStorage.setItem('prTestResults',JSON.stringify(_testResults));_updateTestBadge(); }
 function _updateTestBadge(){ const b=qs('#testBadge');if(!b)return;b.style.display=TEST_STEPS.flatMap(c=>c.steps).some(s=>_testResults[s.id]==='fail')?'block':'none'; }
-function renderTestTab(){ const el=qs('#panelContent');if(!el)return;const all=TEST_STEPS.flatMap(c=>c.steps),total=all.length,done=all.filter(s=>_testResults[s.id]).length,pass=all.filter(s=>_testResults[s.id]==='pass').length,fail=all.filter(s=>_testResults[s.id]==='fail').length,skip=all.filter(s=>_testResults[s.id]==='skip').length,pct=Math.round(done/total*100);let h=`<div class="test-wrap"><div class="test-header"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div><h2>Funktionstest ${APP_VERSION}</h2><p>${done} von ${total} geprüft · ${pct}%</p></div><button class="ts-export-sm" onclick="tcExport()" title="Ergebnisse kopieren">📋</button></div><div class="test-progress"><div class="test-progress-fill" style="width:${pct}%"></div></div></div>`;let num=0;TEST_STEPS.forEach(cat=>{h+=`<div class="test-section-title">${cat.cat}</div>`;cat.steps.forEach(step=>{num++;const r=_testResults[step.id],isActive=_testActive===step.id;const cls=isActive?'tc-active':(r?`tc-${r}`:'');const numTxt=r==='pass'?'✓':r==='fail'?'✗':r==='skip'?'—':num;h+=`<div class="test-card ${cls}" id="tc-${step.id}"><div class="test-card-head" onclick="tcToggle('${step.id}')"><div class="tc-num">${numTxt}</div><div class="tc-title"><b>${step.title}</b><span>${step.sub}</span></div><div class="tc-icon">${step.icon}</div></div><div class="test-card-body"><div class="tap-box"><div class="tap-lbl">👆 Tippe jetzt</div><div class="tap-action">${step.tap}</div><div class="tap-expect">📋 Erwartet: ${step.expect}</div>${step.note?`<div class="tap-note">ℹ️ ${step.note}</div>`:''}</div><div class="tc-note-label">Notiz</div><textarea class="tc-note" id="tcn-${step.id}" placeholder="Was ist aufgefallen?" onclick="event.stopPropagation()">${_testResults['note_'+step.id]||''}</textarea><div class="tc-btns"><button class="tc-btn tc-pass-btn" onclick="tcResult('${step.id}','pass');event.stopPropagation()">✓ Funktioniert</button><button class="tc-btn tc-fail-btn" onclick="tcResult('${step.id}','fail');event.stopPropagation()">✗ Fehler</button><button class="tc-btn tc-skip-btn" onclick="tcResult('${step.id}','skip');event.stopPropagation()">—</button></div></div></div>`;});});if(done===total){h+=`<div class="test-summary"><h3>Test abgeschlossen</h3><div class="ts-grid"><div class="ts-stat ts-pass"><b>${pass}</b><small>Bestanden</small></div><div class="ts-stat ts-fail"><b>${fail}</b><small>Fehler</small></div><div class="ts-stat ts-skip"><b>${skip}</b><small>Übersprungen</small></div></div>${all.filter(s=>_testResults[s.id]==='fail').map(s=>`<div class="ts-fail-item">✗ ${s.icon} ${s.title}</div>`).join('')}<button class="ts-reset" onclick="tcReset()">↺ Zurücksetzen</button><button class="ts-export" onclick="tcExport()">📋 Ergebnisse kopieren</button></div>`;}el.innerHTML=h+'</div>'; }
+function renderTestTab(){ const el=qs('#panelContent');if(!el)return;const all=TEST_STEPS.flatMap(c=>c.steps),total=all.length,done=all.filter(s=>_testResults[s.id]).length,pass=all.filter(s=>_testResults[s.id]==='pass').length,fail=all.filter(s=>_testResults[s.id]==='fail').length,skip=all.filter(s=>_testResults[s.id]==='skip').length,pct=Math.round(done/total*100);let h=`<div class="test-wrap"><div class="test-header"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div><h2>Funktionstest ${APP_VERSION}</h2><p>${done} von ${total} geprüft · ${pct}%</p></div><button class="ts-export-sm" onclick="tcExport()" title="Ergebnisse kopieren">📋</button></div><div class="test-progress"><div class="test-progress-fill" style="width:${pct}%"></div></div></div>`;let num=0;TEST_STEPS.forEach(cat=>{h+=`<div class="test-section-title">${cat.cat}</div>`;cat.steps.forEach(step=>{num++;const r=_testResults[step.id],isActive=_testActive===step.id;const cls=isActive?'tc-active':(r?`tc-${r}`:'');const numTxt=r==='pass'?'✓':r==='fail'?'✗':r==='skip'?'!':num;h+=`<div class="test-card ${cls}" id="tc-${step.id}"><div class="test-card-head" onclick="tcToggle('${step.id}')"><div class="tc-num">${numTxt}</div><div class="tc-title"><b>${step.title}</b><span>${step.sub}</span></div><div class="tc-icon">${step.icon}</div></div><div class="test-card-body"><div class="tap-box"><div class="tap-lbl">👆 Tippe jetzt</div><div class="tap-action">${step.tap}</div><div class="tap-expect">📋 Erwartet: ${step.expect}</div>${step.note?`<div class="tap-note">ℹ️ ${step.note}</div>`:''}</div><div class="tc-note-label">Notiz</div><textarea class="tc-note" id="tcn-${step.id}" placeholder="Was ist aufgefallen?" onclick="event.stopPropagation()">${_testResults['note_'+step.id]||''}</textarea><div class="tc-btns"><button class="tc-btn tc-pass-btn" onclick="tcResult('${step.id}','pass');event.stopPropagation()">✓ Funktioniert</button><button class="tc-btn tc-fail-btn" onclick="tcResult('${step.id}','fail');event.stopPropagation()">✗ Fehler</button><button class="tc-btn tc-skip-btn" onclick="tcResult('${step.id}','skip');event.stopPropagation()">Anmerkung</button></div></div></div>`;});});if(done===total){h+=`<div class="test-summary"><h3>Test abgeschlossen</h3><div class="ts-grid"><div class="ts-stat ts-pass"><b>${pass}</b><small>Bestanden</small></div><div class="ts-stat ts-fail"><b>${fail}</b><small>Fehler</small></div><div class="ts-stat ts-skip"><b>${skip}</b><small>Anmerkung</small></div></div>${all.filter(s=>_testResults[s.id]==='fail').map(s=>`<div class="ts-fail-item">✗ ${s.icon} ${s.title}</div>`).join('')}<button class="ts-reset" onclick="tcReset()">↺ Zurücksetzen</button><button class="ts-export" onclick="tcExport()">📋 Ergebnisse kopieren</button></div>`;}el.innerHTML=h+'</div>'; }
 function tcToggle(id){ if(_testActive&&_testActive!==id){const n=qs(`#tcn-${_testActive}`);if(n)_testResults[`note_${_testActive}`]=n.value;}_testActive=_testActive===id?null:id;renderTestTab();if(_testActive)setTimeout(()=>{const el=qs(`#tc-${_testActive}`);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});},60); }
 function tcResult(id,result){ const n=qs(`#tcn-${id}`);if(n)_testResults[`note_${id}`]=n.value;_testResults[id]=result;saveTestResults();const all=TEST_STEPS.flatMap(c=>c.steps);let found=false,next=null;for(const s of all){if(found&&!_testResults[s.id]){next=s.id;break;}if(s.id===id)found=true;}_testActive=next;renderTestTab();if(next)setTimeout(()=>{const el=qs(`#tc-${next}`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},80); }
 function tcReset(){ if(!confirm('Test zurücksetzen?'))return;TEST_STEPS.flatMap(c=>c.steps).forEach(s=>{delete _testResults[s.id];delete _testResults[`note_${s.id}`];});_testActive=null;saveTestResults();renderTestTab(); }
 
-function tcExport(){
+function tcBuildExportText(){
   const all = TEST_STEPS.flatMap(c=>c.steps);
   const now = new Date().toLocaleDateString('de',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const pass = all.filter(s=>_testResults[s.id]==='pass').length;
@@ -440,12 +478,12 @@ function tcExport(){
   const skip = all.filter(s=>_testResults[s.id]==='skip').length;
   const done = pass+fail+skip;
   let txt = `PR Explorer · Testergebnisse ${APP_VERSION}\n${now}\n${'─'.repeat(36)}\n`;
-  txt += `Gesamt: ${done}/${all.length} · ✓ ${pass} · ✗ ${fail} · — ${skip}\n${'─'.repeat(36)}\n\n`;
+  txt += `Gesamt: ${done}/${all.length} · ✓ ${pass} · ✗ ${fail} · Anmerkung ${skip}\n${'─'.repeat(36)}\n\n`;
   TEST_STEPS.forEach(cat=>{
     txt += `[ ${cat.cat} ]\n`;
     cat.steps.forEach(step=>{
       const r=_testResults[step.id];
-      const icon = r==='pass'?'✓':r==='fail'?'✗':r==='skip'?'—':'○';
+      const icon = r==='pass'?'✓':r==='fail'?'✗':r==='skip'?'!':'○';
       txt += `  ${icon} ${step.title}`;
       const note = _testResults['note_'+step.id];
       if(note && note.trim()) txt += `\n    → ${note.trim()}`;
@@ -453,9 +491,21 @@ function tcExport(){
     });
     txt += '\n';
   });
-  // Copy to clipboard
+  return txt;
+}
+function tcExport(){
+  const txt=tcBuildExportText();
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(txt).then(()=>toast('Ergebnisse kopiert ✓')).catch(()=>tcFallbackCopy(txt));
+    navigator.clipboard.writeText(txt).then(()=>toast('Audit kopiert ✓')).catch(()=>tcFallbackCopy(txt));
+  } else { tcFallbackCopy(txt); }
+}
+async function shareAudit(){
+  const txt=tcBuildExportText();
+  if(navigator.share){
+    try{ await navigator.share({title:`PR Explorer Audit ${APP_VERSION}`, text:txt}); toast('Audit geteilt ✓'); return; }catch(e){}
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('Audit kopiert ✓')).catch(()=>tcFallbackCopy(txt));
   } else { tcFallbackCopy(txt); }
 }
 
@@ -463,7 +513,7 @@ function tcFallbackCopy(txt){
   const ta=document.createElement('textarea');
   ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
   document.body.appendChild(ta); ta.select();
-  try{ document.execCommand('copy'); toast('Ergebnisse kopiert ✓'); }
+  try{ document.execCommand('copy'); toast('Audit kopiert ✓'); }
   catch(e){ toast('Kopieren fehlgeschlagen'); }
   document.body.removeChild(ta);
 }
@@ -479,7 +529,7 @@ function bind(){
   qs('#fullscreenBtn').onclick=()=>setFullscreen(true);
   qs('#fullscreenClose').onclick=()=>setFullscreen(false);
   qs('#settingsBtn').onclick=()=>openSettings();
-  qs('#shareBtn').onclick=()=>toast('Teilen kommt bald');
+  qs('#shareBtn').onclick=()=>shareAudit();
   qs('#filterBtn').onclick=()=>openFilterSheet();
   qs('#filterClose').onclick=()=>closeFilterSheet();
   qs('#resetFilters').onclick=()=>resetFilters();
@@ -506,7 +556,7 @@ const _addCSS=`
 const _styleEl=document.createElement('style');_styleEl.textContent=_addCSS;document.head.appendChild(_styleEl);
 
 /* GLOBALS */
-Object.assign(window,{S,F,cfg,favs,saveFavs,saveCfg,saveStatus,openDetail,closeDetail,setTab,setSt,setBase,setLayer,soloOnMap,exitSoloMode,openSettings,closeSettings,renderSettings,setPinShape,openColorSheet,closeColorSheet,confirmColor,setColorTab,sliderChanged,hexChanged,pickColor,openIconSheet,closeIconSheet,confirmIcon,filterIcons,pickIcon,openDateSheet,closeDateSheet,confirmDate,calPrev,calNext,calDay,exportICS,exportTripICS,resetFilters,setRegion,setSF,toggleRegions,dualMove,renderFilterSheet,closeAllSheets,closeBackdrop,fitVisible,renderLayers,renderPanel,renderDetail,tcToggle,tcResult,tcReset,tcExport,renderTestTab,openTestPanel,syncTestToggle,APP_VERSION,APP_CHANGELOG,qs,lineStyleBtns});
+Object.assign(window,{S,F,cfg,favs,saveFavs,saveCfg,saveStatus,openDetail,closeDetail,setTab,setSt,setBase,setLayer,soloOnMap,exitSoloMode,openSettings,closeSettings,renderSettings,setPinShape,openColorSheet,closeColorSheet,confirmColor,setColorTab,sliderChanged,hexChanged,pickColor,openIconSheet,closeIconSheet,confirmIcon,filterIcons,pickIcon,openDateSheet,closeDateSheet,confirmDate,calPrev,calNext,calDay,exportICS,exportTripICS,resetFilters,setRegion,setSF,toggleRegions,dualMove,renderFilterSheet,closeAllSheets,closeBackdrop,fitVisible,renderLayers,renderPanel,renderDetail,tcToggle,tcResult,tcReset,tcExport,shareAudit,setJournalSort,renderTestTab,openTestPanel,syncTestToggle,APP_VERSION,APP_CHANGELOG,qs,lineStyleBtns});
 
 /* INIT */
 bind();renderFilterSheet();renderLayers();setTab('map');syncTestToggle();setTimeout(fitMadeira,300);_updateTestBadge();

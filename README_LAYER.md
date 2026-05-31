@@ -1,4 +1,4 @@
-# PR Explorer · Layer-Integration V2.3
+# PR Explorer · Layer-Integration V2.4.4
 
 ## Kartenansichten
 
@@ -21,3 +21,10 @@ Die bisherige Dark-OSM-Kartenansicht wurde ersatzlos entfernt. Falls lokal noch 
 ## Hinweis
 
 Externe Tile-Layer sind von Verfügbarkeit, Nutzungsbedingungen und Serverlast der jeweiligen Anbieter abhängig. Die verbindlichen PR-Daten bleiben die lokalen PR-Tracks und POIs der App.
+
+
+## V2.4.4 Ergänzung
+
+- Der Teilen-Button dient jetzt als Audit-Export für die Funktionstest-Liste.
+- GPX- und KML-Linien besitzen eine getrennte Kontursteuerung in den Einstellungen.
+- Die Journal-Liste kann über die Filtereinstellungen sortiert werden.

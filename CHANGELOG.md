@@ -1,4 +1,15 @@
 # PR Explorer · Änderungslogbuch
+## V2.4.4 · 2026-05-31 · Audit-Export, Konturen und Journal-Sortierung
+
+- Versionszähler auf V2.4.4 korrigiert; App-Titel und Änderungslogbuch synchronisiert.
+- Teilen-Button aktiviert: exportiert das aktuelle Test-/Auditprotokoll per Web Share oder kopiert es in die Zwischenablage.
+- Teststatus „—“ in „Anmerkung“ umbenannt.
+- GPX- und KML-Linien um separat steuerbare Konturen erweitert: Ein/Aus, Farbe und Breite.
+- Filtereinstellungen um Journal-Sortierung erweitert: Nummer, Name, Länge, Anfahrt, Fahrzeit, Höhenmeter, Status und Favoriten.
+- Filter-Symbol nochmals abgesenkt und an die untere Bedienzone angepasst.
+- Teilen-Button aus dem deaktivierten Zustand gelöst.
+- Service-Worker-Cache auf `pr-explorer-claude-v2-4-4` erhöht.
+
 
 ## V2.3 · 2026-05-31 · Kartenansichten und freie Overlays
 
