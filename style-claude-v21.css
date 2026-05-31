@@ -76,7 +76,7 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
 .h-sep { width:1px; height:22px; background:var(--border) }
 
 /* Filter FAB */
-.filter-fab { position:absolute; z-index:5; right:18px; bottom:calc(env(safe-area-inset-bottom) + 132px);
+.filter-fab { position:absolute; z-index:5; right:26px; bottom:calc(env(safe-area-inset-bottom) + 92px);
   width:46px; height:46px; border-radius:50%;
   background:rgba(10,24,22,.88); border:1px solid var(--border);
   backdrop-filter:var(--blur-sm); -webkit-backdrop-filter:var(--blur-sm);
@@ -528,6 +528,7 @@ svg { display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-line
   .bnav { left:10px; right:10px }
   .bnav button { font-size:9px }
   .test-toggle { bottom:calc(env(safe-area-inset-bottom) + 84px) }
+  .filter-fab { right:22px; bottom:calc(env(safe-area-inset-bottom) + 90px) }
   .status-btns { grid-template-columns:repeat(2,1fr) }
 }
 
@@ -804,7 +805,7 @@ html, body, #app { position:fixed; inset:0; width:100%; height:100dvh; overflow:
 }
 
 
-/* ══ V2.2 TEST TOGGLE / CHANGELOG LAYOUT ═══════════════════ */
+/* ══ V2.3 TEST TOGGLE / CHANGELOG / LAYER LAYOUT ═════════════ */
 .test-toggle { position:absolute; z-index:13;
   left:50%; bottom:calc(env(safe-area-inset-bottom) + 86px);
   transform:translateX(-50%);

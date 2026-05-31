@@ -1,15 +1,22 @@
 /* ============================================================
-   PR Explorer · app-claude-v22.js · Midnight Teal Pro
-   V2.2: Apple-Safe-Area Layout, Test-Schalter oberhalb Bottom-Nav,
-         Grundeinstellung Sichtbarkeit Test, Änderungslogbuch
+   PR Explorer · app-claude-v23.js · Midnight Teal Pro
+   V2.3: Filter-FAB abgesenkt, Dark-OSM entfernt,
+         Kartenansichten und freie Overlays ergänzt
    ============================================================ */
 'use strict';
 
 const qs  = s => document.querySelector(s);
 const qsa = s => [...document.querySelectorAll(s)];
 
-const APP_VERSION = 'V2.2';
+const APP_VERSION = 'V2.3';
 const APP_CHANGELOG = [
+  { version:'V2.3', date:'2026-05-31', title:'Kartenansichten und freie Overlays', changes:[
+    'Filter-Symbol nach unten versetzt und visuell an die neue Bottom-Navigation/Test-Schalter-Zone angepasst.',
+    'Dark-OSM-Kartenansicht ersatzlos entfernt; gespeicherte Alt-Auswahl wird automatisch auf Topo zurückgesetzt.',
+    'Kartenansichten auf OSM Standard, OpenTopoMap und Satellit reduziert.',
+    'Freie Zusatzebenen Waymarked Trails Hiking und OpenSeaMap Seezeichen als Overlays ergänzt.',
+    'Ebenen-Schalter in Optionen und Einstellungen erweitert.'
+  ]},
   { version:'V2.2', date:'2026-05-31', title:'Apple-Safe-Area Layout und Test-Schalter', changes:[
     'Bottom-Navigation näher an den unteren Displayrand verschoben.',
     'Test-Schalter aus der Bottom-Navigation herausgelöst und oberhalb der Navigation platziert.',
@@ -35,7 +42,7 @@ let cfg = Object.assign({
   pinSize:1.0, gpxWeight:3, gpxDash:'solid', kmlWeight:2, kmlDash:'dashed',
   tripStart:null, tripEnd:null, base:'topo',
   soloMode:false, soloId:null,
-  layers:{ tracks:true, drive:true, heat:false, markers:true, regions:false },
+  layers:{ tracks:true, drive:true, heat:false, markers:true, regions:false, hiking:false, seamarks:false },
   showTestToggle:true,
 }, JSON.parse(localStorage.getItem('prCfg')||'{}'));
 function saveCfg()    { localStorage.setItem('prCfg',    JSON.stringify(cfg)); }
@@ -80,18 +87,54 @@ const S = { tab:'map', selected:null, query:'', fullscreen:false, panel:false };
 /* MAP */
 const map = L.map('map',{zoomControl:false,attributionControl:false,preferCanvas:true,tap:true}).setView([32.755,-16.93],10);
 const TILES = {
-  dark:  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}),
-  light: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}),
-  topo:  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17}),
-  sat:   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}),
+  light: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap contributors'
+  }),
+  topo:  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+    maxZoom:17,
+    attribution:'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
+  }),
+  sat:   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:19,
+    attribution:'Tiles &copy; Esri'
+  }),
 };
+const BASE_LABELS = { light:'☀️ OSM', topo:'🗻 Topo', sat:'🛰 Sat' };
+const OVERLAY_TILES = {
+  hiking: L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',{
+    maxZoom:18, opacity:.78, zIndex:250,
+    attribution:'&copy; waymarkedtrails.org, OpenStreetMap contributors'
+  }),
+  seamarks: L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',{
+    maxZoom:18, opacity:.86, zIndex:260,
+    attribution:'Seamark data &copy; OpenSeaMap, map data &copy; OpenStreetMap contributors'
+  }),
+};
+const OVERLAY_LABELS = {
+  tracks:'GPX Wanderwege', drive:'KML Anfahrten', heat:'Heatmap', markers:'PR-Pins',
+  regions:'Concelhos-Grenzen', hiking:'Waymarked Trails Hiking', seamarks:'OpenSeaMap Seezeichen'
+};
+const OVERLAY_ICONS = { tracks:'🗺️', drive:'🚗', heat:'🔥', markers:'📍', regions:'🌐', hiking:'🥾', seamarks:'⚓' };
+const APP_LAYER_KEYS = ['tracks','drive','heat','markers','regions','hiking','seamarks'];
+if(!TILES[cfg.base]) cfg.base='topo';
+APP_LAYER_KEYS.forEach(k=>{ if(typeof cfg.layers[k] !== 'boolean') cfg.layers[k]=false; });
+['tracks','drive','markers'].forEach(k=>{ if(typeof cfg.layers[k] !== 'boolean') cfg.layers[k]=true; });
 let activeBase = TILES[cfg.base||'topo'].addTo(map);
 const lgTrack=L.layerGroup().addTo(map), lgDrive=L.layerGroup().addTo(map), lgHeat=L.layerGroup().addTo(map), lgMarkers=L.layerGroup().addTo(map), lgRegions=L.layerGroup().addTo(map);
 let locMarker=null, locCircle=null;
 
-function setBase(b){ cfg.base=b;saveCfg();if(activeBase)map.removeLayer(activeBase);activeBase=TILES[b].addTo(map);renderPanel(); }
+function syncOverlayTiles(){
+  Object.entries(OVERLAY_TILES).forEach(([k,l])=>{
+    if(cfg.layers[k]&&!map.hasLayer(l)) l.addTo(map);
+    if(!cfg.layers[k]&&map.hasLayer(l)) map.removeLayer(l);
+  });
+}
+function setBase(b){ if(!TILES[b]) b='topo'; cfg.base=b;saveCfg();if(activeBase)map.removeLayer(activeBase);activeBase=TILES[b].addTo(map);syncOverlayTiles();renderPanel(); }
+function setLayer(k,on){ cfg.layers[k]=!!on; if(k==='regions')toggleRegions(); else if(OVERLAY_TILES[k])syncOverlayTiles(); else renderLayers(); saveCfg(); renderPanel(); }
 function updateZoom(){ const z=map.getZoom(),a=qs('#app'); a.classList.toggle('zoom-far',z<=10); a.classList.toggle('zoom-mid',z>10&&z<=13); a.classList.toggle('zoom-near',z>13); }
 map.on('zoomend',updateZoom); updateZoom();
+syncOverlayTiles();
 
 const CONCELHOS={"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"Funchal"},"geometry":{"type":"Polygon","coordinates":[[[-16.87,32.63],[-16.88,32.68],[-16.93,32.70],[-16.98,32.68],[-16.95,32.63],[-16.87,32.63]]]}},{"type":"Feature","properties":{"name":"Câmara de Lobos"},"geometry":{"type":"Polygon","coordinates":[[[-16.98,32.63],[-16.95,32.63],[-16.98,32.68],[-17.03,32.68],[-17.03,32.63],[-16.98,32.63]]]}},{"type":"Feature","properties":{"name":"Ribeira Brava"},"geometry":{"type":"Polygon","coordinates":[[[-17.03,32.63],[-17.03,32.72],[-17.10,32.73],[-17.14,32.65],[-17.08,32.62],[-17.03,32.63]]]}},{"type":"Feature","properties":{"name":"Ponta do Sol"},"geometry":{"type":"Polygon","coordinates":[[[-17.14,32.65],[-17.10,32.73],[-17.19,32.75],[-17.22,32.67],[-17.14,32.65]]]}},{"type":"Feature","properties":{"name":"Calheta"},"geometry":{"type":"Polygon","coordinates":[[[-17.22,32.67],[-17.19,32.75],[-17.28,32.78],[-17.32,32.70],[-17.22,32.67]]]}},{"type":"Feature","properties":{"name":"Porto Moniz"},"geometry":{"type":"Polygon","coordinates":[[[-17.17,32.82],[-17.28,32.85],[-17.32,32.80],[-17.28,32.78],[-17.19,32.75],[-17.17,32.82]]]}},{"type":"Feature","properties":{"name":"São Vicente"},"geometry":{"type":"Polygon","coordinates":[[[-17.03,32.72],[-17.03,32.82],[-17.17,32.82],[-17.19,32.75],[-17.10,32.73],[-17.03,32.72]]]}},{"type":"Feature","properties":{"name":"Santana"},"geometry":{"type":"Polygon","coordinates":[[[-16.88,32.68],[-16.88,32.82],[-17.03,32.82],[-17.03,32.72],[-16.98,32.68],[-16.88,32.68]]]}},{"type":"Feature","properties":{"name":"Machico"},"geometry":{"type":"Polygon","coordinates":[[[-16.75,32.65],[-16.73,32.72],[-16.80,32.75],[-16.87,32.68],[-16.87,32.63],[-16.75,32.65]]]}},{"type":"Feature","properties":{"name":"Santa Cruz"},"geometry":{"type":"Polygon","coordinates":[[[-16.71,32.63],[-16.70,32.70],[-16.73,32.72],[-16.75,32.65],[-16.71,32.63]]]}},{"type":"Feature","properties":{"name":"Nordeste"},"geometry":{"type":"Polygon","coordinates":[[[-16.70,32.70],[-16.64,32.78],[-16.73,32.80],[-16.80,32.75],[-16.73,32.72],[-16.70,32.70]]]}}]};
 
@@ -173,7 +216,7 @@ function renderPanel(){
   if(S.tab==='overview'){ h=`${tripBannerHtml()}<div class="stats"><div class="stat"><b>${DATA.length}</b><small>PR gesamt</small></div><div class="stat"><b>${list.length}</b><small>Sichtbar</small></div><div class="stat"><b>${favs.size}</b><small>Favoriten</small></div></div><button class="btn-primary" onclick="setTab('journal')">Alle PR anzeigen</button>`; }
   else if(S.tab==='journal'){ const sb=cfg.soloMode?`<div class="solo-banner"><span>Solo: ${cfg.soloId}</span><button onclick="exitSoloMode();renderPanel()">× Alle</button></div>`:'';h=`<div class="search-row"><input class="search-input" placeholder="PR suchen…" value="${S.query}" oninput="S.query=this.value;renderLayers();renderPanel()"></div>${sb}<div class="list">${list.map(r=>prCardHtml(r,true)).join('')||'<div class="empty-state">Keine PR gefunden.</div>'}</div>`; }
   else if(S.tab==='trips'){ const fL=DATA.filter(r=>favs.has(r.id));h=`${tripBannerHtml()}<div class="p-section">Favoriten</div><div class="list">${fL.map(r=>prCardHtml(r,true)).join('')||'<div class="empty-state">Noch keine Favoriten.</div>'}</div>`; }
-  else if(S.tab==='options'){ const L=cfg.layers;h=`<div class="p-section">Kartenstil</div><div class="mode-grid">${['dark','light','topo','sat'].map(m=>`<button class="mode-chip ${cfg.base===m?'active':''}" onclick="setBase('${m}')">${{dark:'🌑 Dark',light:'☀️ OSM',topo:'🗻 Topo',sat:'🛰 Sat'}[m]}</button>`).join('')}</div><div class="p-section">Ebenen</div><div class="sg-box" style="border-radius:18px;overflow:hidden;background:rgba(90,200,250,.04);border:1px solid rgba(90,200,250,.1)">${['tracks','drive','heat','markers','regions'].map(k=>`<div class="opt-row"><span style="font-size:18px;width:28px;text-align:center">${{tracks:'🗺️',drive:'🚗',heat:'🔥',markers:'📍',regions:'🌐'}[k]}</span><span class="opt-label">${{tracks:'GPX Wanderwege',drive:'KML Anfahrten',heat:'Heatmap',markers:'PR-Pins',regions:'Concelhos-Grenzen'}[k]}</span><input type="checkbox" class="s-tog" ${cfg.layers[k]?'checked':''} onchange="cfg.layers['${k}']=this.checked;${k==='regions'?'toggleRegions()':'renderLayers();'}saveCfg();renderPanel()"></div>`).join('')}</div><button class="btn-primary" style="margin-top:14px" onclick="fitVisible();setTab('map')">Sichtbare PR einpassen</button>`; }
+  else if(S.tab==='options'){ h=`<div class="p-section">Kartenstil</div><div class="mode-grid">${Object.keys(BASE_LABELS).map(m=>`<button class="mode-chip ${cfg.base===m?'active':''}" onclick="setBase('${m}')">${BASE_LABELS[m]}</button>`).join('')}</div><div class="p-section">Ebenen</div><div class="sg-box" style="border-radius:18px;overflow:hidden;background:rgba(90,200,250,.04);border:1px solid rgba(90,200,250,.1)">${APP_LAYER_KEYS.map(k=>`<div class="opt-row"><span style="font-size:18px;width:28px;text-align:center">${OVERLAY_ICONS[k]}</span><span class="opt-label">${OVERLAY_LABELS[k]}</span><input type="checkbox" class="s-tog" ${cfg.layers[k]?'checked':''} onchange="setLayer('${k}',this.checked)"></div>`).join('')}</div><button class="btn-primary" style="margin-top:14px" onclick="fitVisible();setTab('map')">Sichtbare PR einpassen</button>`; }
   el.innerHTML=h;
 }
 
@@ -270,7 +313,7 @@ function renderSettings(){
       </div>
     </div></div>
     <div class="sg"><div class="sg-title">Ebenen</div><div class="sg-box">
-      ${['tracks','drive','heat','markers','regions'].map(k=>`<div class="sg-row" style="cursor:default"><span class="sg-label">${{tracks:'GPX Wanderwege',drive:'KML Anfahrten',heat:'Heatmap',markers:'PR-Pins',regions:'Concelhos-Grenzen'}[k]}</span><input type="checkbox" class="s-tog" ${cfg.layers[k]?'checked':''} onchange="cfg.layers['${k}']=this.checked;${k==='regions'?'toggleRegions()':'renderLayers();'}saveCfg();renderSettings()"></div>`).join('')}
+      ${APP_LAYER_KEYS.map(k=>`<div class="sg-row" style="cursor:default"><span class="sg-label">${OVERLAY_ICONS[k]} ${OVERLAY_LABELS[k]}</span><input type="checkbox" class="s-tog" ${cfg.layers[k]?'checked':''} onchange="setLayer('${k}',this.checked);renderSettings()"></div>`).join('')}
     </div></div>
     <div class="sg"><div class="sg-title">Grundeinstellungen</div><div class="sg-box">
       <div class="sg-row" style="cursor:default"><span class="sg-label">Test-Schalter anzeigen</span><input type="checkbox" class="s-tog" ${cfg.showTestToggle?'checked':''} onchange="cfg.showTestToggle=this.checked;saveCfg();syncTestToggle();renderSettings()"></div>
@@ -463,7 +506,7 @@ const _addCSS=`
 const _styleEl=document.createElement('style');_styleEl.textContent=_addCSS;document.head.appendChild(_styleEl);
 
 /* GLOBALS */
-Object.assign(window,{S,F,cfg,favs,saveFavs,saveCfg,saveStatus,openDetail,closeDetail,setTab,setSt,setBase,soloOnMap,exitSoloMode,openSettings,closeSettings,renderSettings,setPinShape,openColorSheet,closeColorSheet,confirmColor,setColorTab,sliderChanged,hexChanged,pickColor,openIconSheet,closeIconSheet,confirmIcon,filterIcons,pickIcon,openDateSheet,closeDateSheet,confirmDate,calPrev,calNext,calDay,exportICS,exportTripICS,resetFilters,setRegion,setSF,toggleRegions,dualMove,renderFilterSheet,closeAllSheets,closeBackdrop,fitVisible,renderLayers,renderPanel,renderDetail,tcToggle,tcResult,tcReset,tcExport,renderTestTab,openTestPanel,syncTestToggle,APP_VERSION,APP_CHANGELOG,qs,lineStyleBtns});
+Object.assign(window,{S,F,cfg,favs,saveFavs,saveCfg,saveStatus,openDetail,closeDetail,setTab,setSt,setBase,setLayer,soloOnMap,exitSoloMode,openSettings,closeSettings,renderSettings,setPinShape,openColorSheet,closeColorSheet,confirmColor,setColorTab,sliderChanged,hexChanged,pickColor,openIconSheet,closeIconSheet,confirmIcon,filterIcons,pickIcon,openDateSheet,closeDateSheet,confirmDate,calPrev,calNext,calDay,exportICS,exportTripICS,resetFilters,setRegion,setSF,toggleRegions,dualMove,renderFilterSheet,closeAllSheets,closeBackdrop,fitVisible,renderLayers,renderPanel,renderDetail,tcToggle,tcResult,tcReset,tcExport,renderTestTab,openTestPanel,syncTestToggle,APP_VERSION,APP_CHANGELOG,qs,lineStyleBtns});
 
 /* INIT */
 bind();renderFilterSheet();renderLayers();setTab('map');syncTestToggle();setTimeout(fitMadeira,300);_updateTestBadge();
