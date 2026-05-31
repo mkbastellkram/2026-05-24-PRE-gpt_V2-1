@@ -1,31 +1,20 @@
-# Upload-Hinweis V2.4.2
+# Upload-Hinweis V2.4.3
 
-## Hochladen/ersetzen
-
-Diese vier Dateien ersetzen die aktiven Dateien im Root-Verzeichnis:
+Diese Dateien im GitHub-Hauptverzeichnis hochladen bzw. ersetzen:
 
 - `index.html`
-- `app-claude-v242.js`
-- `style-claude-v242.css`
+- `app-claude-v243.js`
+- `style-claude-v243.css`
 - `service-worker.js`
 
-## Nicht mehr benötigte aktive Altdateien
+Bestehende Dateien weiterhin behalten:
 
-Diese Dateien können gelöscht oder in `/archive/` verschoben werden:
+- `pr-data.js`
+- `manifest.webmanifest`
+- `icon-180.png`
+- `icon-192.png`
+- `icon-512.png`
 
-- `index-v241.html`
-- `app-claude-v24.js`
-- `app-claude-v241.js`
-- `style-claude-v24.css`
-- `style-claude-v241.css`
-- `service-worker-v24.js`
-- `service-worker-v241.js`
+Alte Versionsdateien wie `app-claude-v242.js`, `style-claude-v242.css`, `CHANGELOG_V242.md`, `README_LAYER_V242.md` können später gelöscht oder in einen Archivordner verschoben werden. Für den Betrieb von V2.4.3 werden sie nicht mehr benötigt.
 
-Dokumentationsdateien wie README/CHANGELOG dürfen bleiben, haben aber keine App-Funktion.
-
-## Nach dem Upload
-
-1. GitHub Pages kurz warten lassen.
-2. iPhone: Safari/PWA vollständig schließen.
-3. App neu öffnen.
-4. Einstellungen → OSM Hiking Vektorlinien → Rohdaten laden / aktualisieren.
+Nach dem Upload auf dem iPhone die PWA/Safari vollständig neu laden. Der Service-Worker nutzt den neuen Cache `pr-explorer-claude-v2-4-3`.

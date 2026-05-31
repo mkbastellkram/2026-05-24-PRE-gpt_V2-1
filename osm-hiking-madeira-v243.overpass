@@ -1,0 +1,5 @@
+[out:json][timeout:120];
+rel["type"="route"]["route"~"^(hiking|foot|walking)$"](32.55,-17.35,32.95,-16.55);
+out body;
+way(r);
+out tags geom;
