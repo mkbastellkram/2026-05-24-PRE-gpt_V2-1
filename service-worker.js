@@ -1,16 +1,7 @@
-/* PR Explorer · V2.4.3 · Service Worker */
-const CACHE = 'pr-explorer-claude-v2-4-3';
-const ASSETS = [
-  './',
-  './index.html',
-  './style-claude-v243.css',
-  './app-claude-v243.js',
-  './pr-data.js',
-  './manifest.webmanifest',
-  './icon-180.png',
-  './icon-192.png',
-  './icon-512.png'
-];
+/* PR Explorer · Claude V2.3 · Service Worker */
+const CACHE = 'pr-explorer-claude-v2-3';
+const ASSETS = ['./', './index.html', './style-claude-v21.css', './app-claude-v21.js',
+  './pr-data.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
