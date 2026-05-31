@@ -1,0 +1,5 @@
+[out:json][timeout:120];
+(
+  relation["type"="route"]["route"~"^(hiking|foot)$"](32.55,-17.35,32.95,-16.55);
+);
+out tags geom;
