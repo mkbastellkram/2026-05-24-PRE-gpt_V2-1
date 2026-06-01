@@ -1,10 +1,10 @@
-/* PR Explorer · V2.4.4 · Service Worker */
-const CACHE = 'pr-explorer-claude-v2-4-4';
+/* PR Explorer · V2.5 · Service Worker */
+const CACHE = 'pr-explorer-claude-v2-5';
 const ASSETS = [
   './',
   './index.html',
-  './style-claude-v244.css',
-  './app-claude-v244.js',
+  './style-claude-v25.css',
+  './app-claude-v25.js',
   './pr-data.js',
   './manifest.webmanifest',
   './icon-180.png',

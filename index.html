@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./icon-180.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="./style-claude-v244.css">
+<link rel="stylesheet" href="./style-claude-v25.css">
 </head>
 <body>
 <div id="app">
@@ -76,6 +76,7 @@
 
   <!-- MAIN PANEL (Journal / Übersicht / Reisen / Optionen) -->
   <section id="panel" class="panel hidden">
+    <button id="panelClose" class="panel-close" onclick="setTab('map')">&#x2715;</button>
     <div class="sheet-bar"></div>
     <div id="panelContent"></div>
   </section>
@@ -124,6 +125,9 @@
         <div class="sl-row"><span class="sl-lbl">BLAU</span>
           <input type="range" id="slB" min="0" max="255" oninput="sliderChanged()">
           <b id="slBv">50</b></div>
+        <div class="sl-row"><span class="sl-lbl">DUNKEL</span>
+          <input type="range" id="slDark" min="0" max="60" value="0" oninput="darkenChanged()">
+          <b id="slDarkv">0%</b></div>
         <div class="hex-row">
           <span>sRGB Hex #</span>
           <input type="text" id="hexInput" maxlength="6" placeholder="5AC8FA" oninput="hexChanged()">
@@ -209,6 +213,6 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="./pr-data.js"></script>
-<script src="./app-claude-v244.js"></script>
+<script src="./app-claude-v25.js"></script>
 </body>
 </html>
